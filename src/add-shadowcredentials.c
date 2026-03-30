@@ -1,7 +1,7 @@
 /*
  * add-shadowcredentials.c
- * Shadow Credentials attack chain — Havoc C2 BOF 
-* Author: (@0xM4L)
+ * Shadow Credentials attack chain Havoc C2 BOF 
+ * Author: (@0xM4L)
  * Based on: RayRRT/BOFs (ShadowCreds-unPAC-BOF)
  */
 

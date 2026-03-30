@@ -393,7 +393,7 @@ RegisterCommand(
 RegisterCommand(
     acl_shadowcredentials, "",
     "acl-shadow",
-    "Shadow Credentials attack — writes msDS-KeyCredentialLink, authenticates via PKINIT, extracts NT hash inline",
+    "Shadow Credentials attack - writes msDS-KeyCredentialLink, authenticates via PKINIT, extracts NT hash inline",
     0,
     "acl-shadow target domain [kdc]",
     "acl-shadow Administrator vuln.local"

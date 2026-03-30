@@ -1,26 +1,23 @@
 # acl-abuse-havoc
 
-AD ACL abuse for Havoc C2.
-
+BOF toolkit for abusing Active Directory ACL misconfigurations through Havoc C2. The main piece is `acl-shadow`, a full Shadow Credentials attack chain that runs entirely in-memory, no external tooling on disk.
 
 ## What's inside
 
-| Command | Right Abused | Transport | Notes |
-|---|---|---|---|
-| `acl-shadow` | GenericWrite / GenericAll | LDAP + Kerberos/88 | Full inline attack chain — see below |
-| `acl-fcp` | ForceChangePassword | LDAPS | |
-| `acl-addmember` | WriteMembers / GenericAll | LDAP | |
-| `acl-owner` | WriteOwner | LDAPS | |
-| `acl-rbcd` | GenericWrite on computer | LDAP | |
-| `acl-dcsync` | WriteDACL on domain | LDAP | Expects full DN |
-| `acl-genericall` | WriteDACL | LDAP | |
-| `acl-ace` | Custom ACE | LDAP | Generic — specify access mask, type, flags and optional GUIDs |
-
-
+| Command | Right Abused | Transport |
+|---|---|---|
+| `acl-shadow` | GenericWrite / GenericAll | LDAP + Kerberos/88 |
+| `acl-fcp` | ForceChangePassword | LDAPS |
+| `acl-addmember` | WriteMembers / GenericAll | LDAP |
+| `acl-owner` | WriteOwner | LDAPS |
+| `acl-rbcd` | GenericWrite on computer | LDAP |
+| `acl-dcsync` | WriteDACL on domain | LDAP |
+| `acl-genericall` | WriteDACL | LDAP |
+| `acl-ace` | Custom ACE | LDAP |
 
 ## acl-shadow
 
-Full inline Shadow Credentials attack chain.
+Full inline Shadow Credentials chain, keygen to NT hash to cleanup.
 
 ```
 1.  LDAP lookup         resolve target DN + objectSid
@@ -35,12 +32,14 @@ Full inline Shadow Credentials attack chain.
 10. Cleanup             remove KeyCredential from msDS-KeyCredentialLink
 ```
 
-**Encryption types:** AES256-CTS-HMAC-SHA1-96, AES128-CTS-HMAC-SHA1-96, RC4-HMAC. The KDC negotiates from this list, environments that reject AES256-only are handled automatically.
+The entire window from write to cleanup is under 5 seconds.
 
-**Requirements:**
+**Encryption types:** AES256-CTS-HMAC-SHA1-96, AES128-CTS-HMAC-SHA1-96, RC4-HMAC, the KDC negotiates from this list, so environments that only support a subset are handled automatically.
+
+**Target requirements:**
 - Windows Server 2016+ DC
-- AD CS installed with the `Kerberos Authentication` certificate template
-- Target account must have GenericWrite or GenericAll
+- AD CS with the `Kerberos Authentication` certificate template
+- GenericWrite or GenericAll on the target object
 
 **Output:**
 ```
@@ -51,8 +50,6 @@ Full inline Shadow Credentials attack chain.
 [+] NT Hash: aabbccdd11223344aabbccdd11223344
 [+] keycred :: removed from msDS-KeyCredentialLink
 ```
-
-
 
 ## Setup
 
@@ -65,8 +62,6 @@ make
 Load `acl-abuse.py` via Script Manager in the Havoc client.
 
 **Dependencies:** `mingw-w64`, x64 only.
-
-
 
 ## Usage
 
@@ -96,20 +91,22 @@ acl-genericall jsmith attacker vuln.local
 acl-ace jsmith attacker GenericAll
 ```
 
-
-
 ## Notes
 
-- acl-fcp and acl-owner need LDAPS (port 636).
-- acl-dcsync takes the full domain DN, DC=domain,DC=local. Drops DS-Replication-Get-Changes and DS-Replication-Get-Changes-All in one shot.
-- acl-shadow writes and cleans up the KeyCredential in the same run. Window is under 5 seconds.
+- `acl-fcp` and `acl-owner` go over LDAPS (port 636). If they're not working, make sure LDAPS is reachable from the beacon.
+- `acl-dcsync` takes the full domain DN (`DC=domain,DC=local`). Drops `DS-Replication-Get-Changes` and `DS-Replication-Get-Changes-All` in one shot.
+- `acl-shadow` writes and cleans up the KeyCredential in the same run. The exposure window is under 5 seconds.
 - Everything runs as the current beacon user via Negotiate.
-- DC is auto-discovered. Pass it explicitly if the network is segmented.
+- DC auto-discovery works in most cases. Pass it explicitly if the network is segmented.
+- Arguments with spaces or special characters need quotes (`"Domain Admins"`, `"DC=vuln,DC=local"`).
 
-## DEMO
+## Opsec
 
+`acl-shadow` touches two protocols: LDAP for the KeyCredential write/delete and Kerberos for the PKINIT + U2U exchange. On the defensive side, the LDAP write generates event **5136** (directory object modified) on the target's `msDS-KeyCredentialLink` attribute, and the PKINIT authentication generates event **4768** with certificate info. The cleanup removes the attribute value, but the 5136 for the initial write is already logged. The <5s window between write and cleanup makes it harder to catch in real-time, but forensic analysis will still see both events.
 
+No artifacts are written to disk. The RSA keypair, certificate, and PFX all live in memory for the duration of the BOF execution.
+## Demo
 ## Credits
 
-Shadow Credentials BOF based on [RayRRT/BOFs](https://github.com/RayRRT/BOFs), integration, debugging, and Havoc wrapper by [0xM4L](https://github.com/0xM4L).  
-LDAP BOF reference implementations, [P0142/LDAP-Bof-Collection](https://github.com/P0142/LDAP-Bof-Collection).
+Shadow Credentials BOF based on [RayRRT/BOFs](https://github.com/RayRRT/BOFs), integration, debugging, etype negotiation, and Havoc wrapper by [0xM4L](https://github.com/0xM4L).
+LDAP BOFs reference [P0142/LDAP-Bof-Collection](https://github.com/P0142/LDAP-Bof-Collection).
