@@ -106,6 +106,9 @@ acl-ace jsmith attacker GenericAll
 
 No artifacts are written to disk. The RSA keypair, certificate, and PFX all live in memory for the duration of the BOF execution.
 ## Demo
+
+https://github.com/user-attachments/assets/03f03921-5b62-4107-9890-1f09f65a1334
+
 ## Credits
 
 Shadow Credentials BOF based on [RayRRT/BOFs](https://github.com/RayRRT/BOFs), integration, debugging, etype negotiation, and Havoc wrapper by [0xM4L](https://github.com/0xM4L).
